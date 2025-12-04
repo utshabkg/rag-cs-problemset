@@ -115,13 +115,37 @@ def generate_response(model, tokenizer, question, device="cuda"):
         logger.warning(f"Invalid question input: {type(question)} - {question}")
         return "[Error: Invalid question input]"
     
-    inputs = tokenizer(question, return_tensors="pt").to(device)
+    # Set pad token if not set
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    
+    # Create a clear, professional prompt
+    prompt = f"""Question: {question}
+
+Provide a clear and concise answer:"""
+    
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=2048).to(device)
     with torch.no_grad():
-        output = model.generate(**inputs, max_new_tokens=512, do_sample=False)
+        output = model.generate(
+            **inputs, 
+            max_new_tokens=512, 
+            do_sample=False,
+            pad_token_id=tokenizer.eos_token_id,
+            eos_token_id=tokenizer.eos_token_id
+        )
     # Free up memory after generation
     gc.collect()
     torch.cuda.empty_cache()
     response = tokenizer.decode(output[0], skip_special_tokens=True)
+    
+    # Remove the prompt from the response to get only the answer
+    if prompt in response:
+        response = response.replace(prompt, "").strip()
+    
+    # If response becomes empty after stripping, use original (model may have reformatted)
+    if not response or not response.strip():
+        response = tokenizer.decode(output[0], skip_special_tokens=True)
+    
     return response
 
 def judge_response(judge_model, judge_tokenizer, question, answer, response, device="cuda"):
@@ -136,23 +160,54 @@ def judge_response(judge_model, judge_tokenizer, question, answer, response, dev
         logger.warning(f"Invalid response for judging: {type(response)}")
         return 0.0
     
-    # Simplified prompt for single overall score considering multiple criteria
-    prompt = (
-        f"You are an expert judge. Evaluate the model's response considering correctness, completeness, relevancy, and clarity.\n"
-        f"Question: {question}\n"
-        f"Reference Answer: {answer}\n"
-        f"Model Response: {response}\n\n"
-        f"Provide a single overall score (0-1 scale): "
-    )
-    inputs = judge_tokenizer(prompt, return_tensors="pt").to(device)
+    # Set pad token if not set
+    if judge_tokenizer.pad_token is None:
+        judge_tokenizer.pad_token = judge_tokenizer.eos_token
+    
+    # Professional prompt for continuous scoring
+    prompt = f"""You are an expert evaluator. Rate the model's answer on a scale from 0.0 to 1.0 based on correctness, completeness, relevancy, and clarity.
+
+Question: {question}
+
+Reference Answer: {answer}
+
+Model's Answer: {response}
+
+Provide ONLY a numerical score between 0.0 and 1.0 (e.g., 0.75, 0.3, 0.95). Do not explain.
+Score:"""
+    
+    inputs = judge_tokenizer(prompt, return_tensors="pt", padding=True, truncation=True, max_length=2048).to(device)
     with torch.no_grad():
-        output = judge_model.generate(**inputs, max_new_tokens=256)
+        output = judge_model.generate(
+            **inputs, 
+            max_new_tokens=10,
+            do_sample=False,
+            pad_token_id=judge_tokenizer.eos_token_id,
+            eos_token_id=judge_tokenizer.eos_token_id,
+            temperature=0.1
+        )
     judge_output = judge_tokenizer.decode(output[0], skip_special_tokens=True)
     
-    # Extract overall score from judge output
+    # Remove the prompt from output
+    if prompt in judge_output:
+        judge_output = judge_output.replace(prompt, "").strip()
+    
+    # Extract score - look for decimal numbers between 0 and 1
     import re
-    match = re.search(r"([01](?:\.\d+)?|0?\.\d+)", judge_output)
-    overall_score = float(match.group(1)) if match else None
+    match = re.search(r'\b(0?\.\d+|1\.0+|0\.0+|1)\b', judge_output)
+    if match:
+        score_str = match.group(1)
+        try:
+            overall_score = float(score_str)
+            # Ensure score is between 0 and 1
+            overall_score = max(0.0, min(1.0, overall_score))
+        except ValueError:
+            overall_score = 0.0
+            logger.warning(f"Could not parse score: {judge_output}")
+    else:
+        overall_score = 0.0
+        logger.warning(f"No score found in judge output: {judge_output[:100]}")
+    
     logger.info(f"Score: {overall_score}")
     
     return overall_score

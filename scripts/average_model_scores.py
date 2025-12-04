@@ -30,9 +30,11 @@ def print_avg_scores():
         for col in model_columns[fname]:
             if col in df.columns:
                 avg = df[col].mean()
-                results.append({'Model': col, 'Average_Score': avg, 'Judge_Model': judge_model})
+                results.append(
+                    {'Model': col, 'Average_Score': avg, 'Judge_Model': judge_model})
             else:
-                results.append({'Model': col, 'Average_Score': 'column not found', 'Judge_Model': judge_model})
+                results.append(
+                    {'Model': col, 'Average_Score': 'column not found', 'Judge_Model': judge_model})
     # Save results to CSV
     outpath = os.path.join(base, 'average_model_scores.csv')
     pd.DataFrame(results).to_csv(outpath, index=False)

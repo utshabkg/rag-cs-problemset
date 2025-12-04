@@ -1,9 +1,9 @@
 """
 Evaluation pipeline for automatic judging of model responses.
 - Loads processed dataset (data/processed_csprob.csv)
-- Runs each question through selected models (Llama-3-8B, Mistral-7B, Qwen-7B)
-- Uses judge models (Qwen, Llama from /media/12TB/shared/datasets/) to verify responses
-- Saves results to evaluation/results.csv
+- Runs each question through selected models (llama3-8b, mistral-7b, aya-expanse-8b, qwen2.5-7b (evaluator))
+- Uses judge models (gpt-oss-120b (judge) from /media/12TB/shared/datasets/) to verify responses
+- Saves results to evaluation/results_2.csv
 """
 
 
@@ -22,8 +22,8 @@ load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), '../.env')))
 HF_TOKEN = os.getenv('HF_TOKEN')
 
 DATA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data/processed_csprob.csv'))
-RESULTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../evaluation/results.csv'))
-LOG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../evaluation/evaluation.log'))
+RESULTS_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../evaluation/results_2.csv'))
+LOG_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../evaluation/evaluation_2.log'))
 
 # Setup logging
 logging.basicConfig(

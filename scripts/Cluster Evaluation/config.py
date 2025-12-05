@@ -10,11 +10,7 @@ from typing import Dict
 # Paste your 5 Google AI Studio API keys here
 # Get keys from: https://aistudio.google.com/app/apikey
 JUDGE_API_KEYS = [
-    "AIzaSyAbCK5BGPDtIMBtcylBFoRxNXxlqLgPav4",
-    "AIzaSyAbCK5BGPDtIMBtcylBFoRxNXxlqLgPav4",
-    "AIzaSyAbCK5BGPDtIMBtcylBFoRxNXxlqLgPav4",
-    "AIzaSyAbCK5BGPDtIMBtcylBFoRxNXxlqLgPav4",
-    "AIzaSyAbCK5BGPDtIMBtcylBFoRxNXxlqLgPav4",
+    "GEMINI-API-KEY",
 ]
 
 JUDGE_MODEL_NAME = "gemini-2.0-flash"
